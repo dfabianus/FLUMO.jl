@@ -81,6 +81,9 @@ fit_u1, confInt, p_u1 = corr_I0(LDH_offline[1:38])
 fit_u2, p_u2 = corr_aew(LDH_offline[1:38])
 
 ps = simulate_LDH_experiment.(LDH_online, LDH_offline)
+@register_symbolic F_fun(t)
+@register_symbolic dAEWdt_fun(t)
+pt = simulate_LDH_soft_sensor.(LDH_online, LDH_offline)
 
 ptot_LDH = plot([p[2] for p in ps]..., layout=(7,7), size=(3000,3000), legendfontsize = 10,
         title = "",

@@ -5,98 +5,44 @@ using BioprocessingModelLibrary.Refolding
 using OrdinaryDiffEq
 using ModelingToolkit
 
-# using XLSX
-# using DataFrames
-# using Interpolations
-# using Random
-# using Distributions
-# using LsqFit
 using Plots
-# using LaTeXStrings
-# using ModelingToolkit
 using MonteCarloMeasurements
-# using StatsBase
-# using LowLevelParticleFilters, LinearAlgebra, StaticArrays, Distributions
-# using JLD2
-# using OrdinaryDiffEq
-using Loess
-using SavitzkyGolay
+using CSV
+
 #---------------------------------------------------------------------------#
 
 LDH_online, LDH_offline = get_LDH_data()
 GalOx_online, GalOx_offline = get_GalOx_data()
 HRP_online = get_HRP_data()
 
-#### --------------- derivatives  ------------------------------------------#
-scatter(LDH_online[1][2:end,1]./60, LDH_online[1].Integral)
-scatter(LDH_online[1][2:end,1]./60, LDH_online[1][!,2])
-
-function diff_AEW_LDH!(online)
-    t = deepcopy(online[:,1]./60)
-    #F = deepcopy(online.Integral)
-    AEW = deepcopy(Float64.(online[:,2]))
-    dAEWdt = diff(AEW)./diff(t)
-    idxInf = findall(x->x>5, dAEWdt)
-    for i in idxInf
-        AEW[i+1:end] = AEW[i+1:end].-diff(AEW)[i]
-    end
-    #AEW = hampel(AEW, 1, 3)
-
-    dAEWdt = diff(AEW)./diff(t)
-    dAEWdt_smooth = savitzky_golay(AEW, 15, 5, deriv=1).y[2:end]./diff(t)
-    for i in idxInf
-        dAEWdt[i] = (dAEWdt[i+1] + dAEWdt[i-1])/2
-        dAEWdt_smooth[i] = (dAEWdt_smooth[i+1] + dAEWdt_smooth[i-1])/2
-    end
-    dAEWdt = hampel(dAEWdt, 2, 2)
-    dAEWdt_smooth = hampel(dAEWdt_smooth, 2, 2)
-    dAEWdt_smooth_loess = predict(loess(t[2:end], dAEWdt, span=0.09), t[2:end])
-    dAEWdt = [dAEWdt[1]; dAEWdt]
-    dAEWdt_smooth = [dAEWdt_smooth[1]; dAEWdt_smooth]
-    dAEWdt_smooth_loess = [dAEWdt_smooth_loess[1]; dAEWdt_smooth_loess]
-
-    p1 = scatter(t,AEW.-AEW[1])
-    p = scatter(t,dAEWdt)
-    plot!(t,dAEWdt_smooth, linewidth=4)
-    plot!(t,dAEWdt_smooth_loess)
-    online.diff_AEW = [maximum([0, -d]) for d in dAEWdt_smooth_loess]
-    return p1, p
-end
-
-ps3 = diff_AEW_LDH!.(LDH_online)
-ints = -[cumsum(online.diff_AEW[2:end].*diff(online[:,1]./60)) for online in LDH_online]
-plot([p[1] for p in ps3]...,size=(3000,3000))
-plot([scatter(online.diff_AEW) for online in LDH_online]...,size=(3000,3000))
-plot([scatter(online[:,1]./60, online[!,2]) for online in LDH_online]...,size=(3000,3000))
-for (i,online) in enumerate(LDH_online)
-    p = scatter([p[1] for p in ps3][i])
-    scatter!(online[2:end,1]./60, ints[i])
-    display(p)
-end
-
 #### --------------- LDH ---------------------------------------------------#
+
+# numeric differentiation of AEW
+diff_AEW_LDH!.(LDH_online) 
 
 # output correlations to fluorescence intensity and average emission wavelength
 fit_u1, confInt, p_u1 = corr_I0(LDH_offline[1:38])
 fit_u2, p_u2 = corr_aew(LDH_offline[1:38])
 
+# plot the AEWs and their derivatives
+plot_multiple_AEW(LDH_online, save=false)           # first the raw AEW
+plot_multiple_dAEW_adapted(LDH_online, save=false)  # subtract the up pulses
+plot_multiple_diff_aew(LDH_online, save=false)      # then differentiate
+
+# When reintegrate the obtained derivative, we see different degrees of errors 
+plot_multiple_integrals_AEW(LDH_online, save=false) 
+
+# Open-loop simulation of the models 
 ps = simulate_LDH_experiment.(LDH_online, LDH_offline)
-@register_symbolic F_fun(t)
-@register_symbolic dAEWdt_fun(t)
+
+# Simulation of the direct soft sensor (method 1)
 pt = simulate_LDH_soft_sensor.(LDH_online, LDH_offline)
 
-ptot_LDH = plot([p[2] for p in ps]..., layout=(7,7), size=(3000,3000), legendfontsize = 10,
-        title = "",
-        titlelocation = :left,
-        bottom_margin=30Plots.px,
-        left_margin=20Plots.px,
-        tickfontsize = 10,
-        xlabelfontsize = 10,
-        ylabelfontsize = 10,
-        grid = false,
-        framestyle = :box)
+# Simulation of the indirect UKF-based soft sensor (method 2)
 
-savefig(ptot_LDH, "figs/LDH_simulations.png")
+plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.png")
+
+#savefig(ptot_LDH, "figs/LDH_simulations.png")
 
 #### -------------- GalOx ---------------------------------------------------#
 p = []

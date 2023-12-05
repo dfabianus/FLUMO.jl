@@ -1,3 +1,14 @@
+# ptot_LDH = plot([p[2] for p in ps]..., layout=(7,7), size=(3000,3000), legendfontsize = 10,
+#         title = "",
+#         titlelocation = :left,
+#         bottom_margin=30Plots.px,
+#         left_margin=20Plots.px,
+#         tickfontsize = 10,
+#         xlabelfontsize = 10,
+#         ylabelfontsize = 10,
+#         grid = false,
+#         framestyle = :box)
+
 function splitdf(df, pct)
     @assert 0 <= pct <= 1
     ids = collect(axes(df, 1))

@@ -36,11 +36,16 @@ plot_multiple_integrals_AEW(LDH_online, save=false)
 ps = simulate_LDH_experiment.(LDH_online, LDH_offline)
 
 # Simulation of the direct soft sensor (method 1)
-pt = simulate_LDH_soft_sensor.(LDH_online, LDH_offline)
-
+pt = simulate_LDH_soft_sensor.(LDH_online[[40,41,42]], LDH_offline[[40,41,42]])
+plot(pt..., layout=(1,3), size=(1000,550))
 # Simulation of the indirect UKF-based soft sensor (method 2)
 
-plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.png")
+plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.pdf")
+
+# save the preprocessed data
+for (i,online) in enumerate(LDH_online)
+    CSV.write("data/LDH/LDH_preprocessed_$i.csv", online)
+end
 
 #savefig(ptot_LDH, "figs/LDH_simulations.png")
 

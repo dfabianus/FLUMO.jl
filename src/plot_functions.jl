@@ -56,7 +56,7 @@ function plot_multiple_integrals_AEW(onlines; save=false, filename="figs/LDH_com
     # h = histogram(RMSE_raw, label="finite-difference", bins=0:0.05:0.5, alpha=0.5)
     # h = histogram!(RMSE_sgol, label="Savitzky-Golay", bins=0:0.05:0.5, alpha=0.5)
     # h = histogram!(RMSE_loess, label="Loess", bins=0:0.05:0.5, alpha=0.5)
-    display(h)
+    #display(h)
     if save
         savefig(ps_tot, filename)
     end
@@ -75,8 +75,8 @@ function plot_AEW_vs_dAEW(onlines; save=false, filename="figs/plot_AEW_vs_dAEW.p
         if i == 1
             ylabel!("dAEW in nm/hour")
         end
-        scatter!(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, label="Savitzky-Golay")
-        scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.2, label="Loess")
+        scatter!(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay")
+        scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.2, markershape = :xcross, label="Loess")
         push!(ps, p)
     end
     ps_tot = plot([p for p in vcat(ps2,ps)]..., size=(1000,550), layout=(2,length(onlines)),

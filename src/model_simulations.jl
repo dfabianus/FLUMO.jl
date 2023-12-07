@@ -115,16 +115,16 @@ function simulate_LDH_soft_sensor(online, offline)
     t = online[:,1]./60
     #p=scatter(t,online.diff_AEW_raw, markersize = 3, markeralpha=0.4, markerstrokewidth = 0.2, label="Finite Difference",
             
-    p=scatter(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay")
-    p=scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.7, markershape = :xcross, label="Loess", ylabel="dAEW in nm/hour")
+    p=scatter(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay", color =2)
+    p=scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.7, markershape = :xcross, label="Loess", ylabel="dAEW in nm/hour", color = 3)
     p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (direct)", ylabel="Concentration in mg/L", color=1)
-    p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cI).u), label = "I (open-loop)", 
-    ylabel="Concentration in mg/L", linewidth=3, linestyle=:dash,color=1)
+    #p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cI).u), label = "I (open-loop)", 
+    #ylabel="Concentration in mg/L", linewidth=1.5, linestyle=:dash,color=1)
     #p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N(t)")
     #p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A(t)")
     #p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.I).u, label = "SOL(t)")
     p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "N+A (direct)", color=2)
-    p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cN+sys_ol.cA).u), label = "N+A (open-loop)", linewidth=3, linestyle=:dash, color=2)
+    p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cN+sys_ol.cA).u), label = "N+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
     # if "c_p" in names(offline)
     #     scatter!(offline.time./60, offline.c_p, label = "P(t) data")
     # else
@@ -153,7 +153,7 @@ function simulate_LDH_soft_sensor(online, offline)
     p3 = plot(ts, osol(ts, idxs=sys_simp.F).u, label = "F(t)")
     p4 = plot(online[!,1]./60, online[!,2], label = "measured")
     pt = plot(p, p3, p2, p4, layout=(2,2), xlabel="Time (h)", size = (1000,1000))
-    pt2 = plot(p, p2, layout=(2,1), xlabel="Time (h)", size=(400,550), #legendfontsize = 10,
+    pt2 = plot(p, p2, layout=(2,1), xlabel="Time (h)", size=(400,550), legendfontsize = 7,
     titlelocation = :left,
     bottom_margin=10Plots.px,
     left_margin=10Plots.px,

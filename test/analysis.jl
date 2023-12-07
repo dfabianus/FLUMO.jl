@@ -37,7 +37,12 @@ ps = simulate_LDH_experiment.(LDH_online, LDH_offline)
 
 # Simulation of the direct soft sensor (method 1)
 pt = simulate_LDH_soft_sensor.(LDH_online[[40,41,42]], LDH_offline[[40,41,42]])
-plot(pt..., layout=(1,3), size=(1000,550))
+pt2 = plot(pt..., layout=(1,3), size=(1000,550),
+    title=["Process 4" "" "Process 5" "" "Process 6" ""],
+    ylabel=["dAEW in nm/hour" "Concentration in g/L" "" "" "" ""],
+    xlabel=["" "Time in hours" "" "Time in hours" "" "Time in hours"],
+    legend=[true :bottomleft false false false false])
+savefig(pt2, "figs/LDH_simulations_2.pdf")
 # Simulation of the indirect UKF-based soft sensor (method 2)
 
 plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.pdf")

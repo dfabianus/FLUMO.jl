@@ -12,7 +12,9 @@ function load_datasets_Galox(path_online, path_offline, experiments = experiment
     dfs_online = []
     df_offline = DataFrame(XLSX.readtable(path_offline, "All"))
     for i in experiments
-        push!(dfs_online, DataFrame(XLSX.readtable(path_online, "Run$i")))
+        df = DataFrame(XLSX.readtable(path_online, "Run$i"))
+        df = df[:,[1,3,4]]
+        push!(dfs_online, df)
     end
     return (online=dfs_online, offline=df_offline)
 end

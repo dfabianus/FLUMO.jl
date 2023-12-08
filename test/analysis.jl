@@ -55,36 +55,22 @@ end
 #savefig(ptot_LDH, "figs/LDH_simulations.png")
 
 #### -------------- GalOx ---------------------------------------------------#
-p = []
-for (idx,online) in enumerate(GalOx_online)
-    t = online[:,"Process Time [min]"]./60
-    I = online.Integral
-    push!(p, plot(t,I))
-end
-plot(p...)
+diff_AEW_LDH!.(GalOx_online)
 
-p = []
-for (idx,online) in enumerate(GalOx_online)
-    t = online[:,"Process Time [min]"]./60
-    AEW = online[:,"Average emission wavelength [nm]"]
-    push!(p, plot(t,AEW))
-end
-plot(p...)
+plot_multiple_AEW(GalOx_online, save=false)           # first the raw AEW
+plot_multiple_dAEW_adapted(GalOx_online, save=false)  # subtract the up pulses
+plot_multiple_diff_aew(GalOx_online, save=false)      # then differentiate
+plot_multiple_integrals_AEW(GalOx_online, save=false) 
+plot_AEW_vs_dAEW_c(GalOx_online[[1,2,4,5,6,7]], GalOx_offline[[1,2,4,5,6,7],"t_cop"], save=true)
 
 galox_offline_r = [GalOx_offline[i,:] for i in 1:size(GalOx_offline)[1]]
-ps2 = simulate_GalOx_experiment.(GalOx_online, galox_offline_r)
-
-ptot_GalOx = plot([p[2] for p in ps2]..., layout=(3,4), size=(2000,1500), legendfontsize = 10,
-        title = "",
-        titlelocation = :left,
-        bottom_margin=30Plots.px,
-        left_margin=20Plots.px,
-        tickfontsize = 10,
-        xlabelfontsize = 10,
-        ylabelfontsize = 10,
-        grid = false,
-        framestyle = :box)
-
+pt = simulate_GalOx_soft_sensor.(GalOx_online[[1,2,4,5,6,7]], galox_offline_r[[1,2,4,5,6,7]])
+pt2 = plot(pt..., layout=(2,3), size=(1000,550),
+    title=["GalOx 1" "GalOx 2" "GalOx 3" "GalOx 4" "GalOx 5" "GalOx 6"],
+    ylabel = ["Concentration in g/L" "" "" "Concentration in g/L" "" ""],
+    xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
+    legend=[false false false :topleft false false])
+savefig(pt2, "figs/GalOx_simulations_2.pdf")
 #### --------------- HRP ---------------------------------------------------#
 
 p = []

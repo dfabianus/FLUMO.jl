@@ -3,12 +3,12 @@ module FLUMO
 export get_LDH_data, get_GalOx_data, get_HRP_data
 export p_LDH
 export simulate_LDH_experiment, simulate_GalOx_experiment
-export simulate_LDH_soft_sensor
+export simulate_LDH_soft_sensor, simulate_GalOx_soft_sensor
 export corr_I0, corr_aew
 export moving_average, hampel
 export diff_AEW_LDH!
 export plot_multiple_AEW, plot_multiple_dAEW_adapted, plot_multiple_diff_aew, plot_multiple_integrals_AEW
-export plot_AEW_vs_dAEW
+export plot_AEW_vs_dAEW, plot_AEW_vs_dAEW_b, plot_AEW_vs_dAEW_c
 
 using XLSX
 using DataFrames

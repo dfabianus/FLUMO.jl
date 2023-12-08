@@ -94,3 +94,104 @@ function plot_AEW_vs_dAEW(onlines; save=false, filename="figs/plot_AEW_vs_dAEW.p
         savefig(ps_tot, filename)
     end
 end
+
+function plot_AEW_vs_dAEW_b(onlines, t_cop; save=false, filename="figs/plot_AEW_vs_dAEW.png")
+    ps = []; ps2=[];
+    for (i, online) in enumerate(onlines)
+        t = online[:,1]./60
+        p = plot(t, online[:,2], label="", title="Process $(i)",ylabel = "AEW in nm")
+        #vline!([t_cop[i]/60], label="t_cop", color="red")
+        #push!(ps2, p2)
+
+        subplot = twinx()
+        p = scatter!(subplot,t,online.diff_AEW_raw, markersize = 3, markeralpha=0.4, 
+            markerstrokewidth = 0.2, label="Finite Difference",
+            xlabel="Time in hours", ylim=(0,10), ylabel = "dAEW in nm/hour")
+        scatter!(subplot,t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay")
+        scatter!(subplot,t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.2, markershape = :xcross, label="Loess")
+        vline!(subplot,[t_cop[i]/60], label="t_cop", color="red")
+        push!(ps, p)
+    end
+    ps_tot = plot([p for p in ps]..., size=(1000,550), layout=(2,Int64(length(onlines)/2)),
+        legendfontsize = 5,
+        titlelocation = :left,
+        bottom_margin=10Plots.px,
+        #left_margin=10Plots.px,
+        tickfontsize = 10,
+        xlabelfontsize = 10,
+        ylabelfontsize = 10,
+        grid = false,
+        framestyle = :box,
+        )
+    # ps_tot2 = plot([p for p in ps2]..., size=(1000,550), layout=(2,Int64(length(onlines)/2)),
+    #     legendfontsize = 7,
+    #     titlelocation = :left,
+    #     bottom_margin=10Plots.px,
+    #     left_margin=10Plots.px,
+    #     tickfontsize = 10,
+    #     xlabelfontsize = 10,
+    #     ylabelfontsize = 10,
+    #     grid = false,
+    #     framestyle = :box,
+    #     #legend=[false true false false false false]
+    #     )
+    display(ps_tot)
+    # display(ps_tot2)
+    if save
+        savefig(ps_tot, filename)
+    end
+end
+
+
+function plot_AEW_vs_dAEW_c(onlines, t_cop; save=false, filename="figs/Galox_dAEW.pdf", filename2="figs/Galox_AEW.pdf")
+    ps = []; ps2=[];
+    for (i, online) in enumerate(onlines)
+        t = online[:,1]./60
+        p2 = scatter(t, online[:,2], label="", title="GalOx $(i)",ylabel = "AEW in nm", markersize = 3,
+        markerstrokewidth = 0.7)
+        vline!([t_cop[i]/60], label="copper addition", color="red")
+        push!(ps2, p2)
+
+        p = scatter(t,online.diff_AEW_raw, markersize = 3, markeralpha=0.4, title="GalOx $(i)",
+            markerstrokewidth = 0.2, label="Finite Difference",
+            xlabel="Time in hours", ylim=(0,10), ylabel = "dAEW in nm/hour")
+        scatter!(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay")
+        scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.2, markershape = :xcross, label="Loess")
+        vline!([t_cop[i]/60], label="copper addition", color="red")
+        push!(ps, p)
+    end
+    ps_tot = plot([p for p in ps]..., size=(1000,550), layout=(2,Int64(length(onlines)/2)),
+        legendfontsize = 7,
+        titlelocation = :left,
+        bottom_margin=10Plots.px,
+        left_margin=10Plots.px,
+        tickfontsize = 10,
+        xlabelfontsize = 10,
+        ylabelfontsize = 10,
+        grid = false,
+        framestyle = :box,
+        legend=[:topleft false false :topleft false false],
+        ylabel = ["dAEW in nm/hour" "" "" "dAEW in nm/hour" "" ""],
+        xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
+        )
+    ps_tot2 = plot([p for p in ps2]..., size=(1000,550), layout=(2,Int64(length(onlines)/2)),
+        legendfontsize = 7,
+        titlelocation = :left,
+        bottom_margin=10Plots.px,
+        left_margin=10Plots.px,
+        tickfontsize = 10,
+        xlabelfontsize = 10,
+        ylabelfontsize = 10,
+        grid = false,
+        framestyle = :box,
+        legend=[:topleft false false :topleft false false],
+        ylabel = ["AEW in nm" "" "" "AEW in nm" "" ""],
+        xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
+        )
+    display(ps_tot)
+    display(ps_tot2)
+    if save
+        savefig(ps_tot, filename)
+        savefig(ps_tot2, filename2)
+    end
+end

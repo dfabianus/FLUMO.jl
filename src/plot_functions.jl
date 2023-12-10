@@ -66,7 +66,7 @@ function plot_AEW_vs_dAEW(onlines; save=false, filename="figs/plot_AEW_vs_dAEW.p
     ps = []; ps2=[];
     for (i, online) in enumerate(onlines)
         t = online[:,1]./60
-        push!(ps2, scatter(t, online[:,2], markersize = 3, markerstrokewidth = 0.2, label="", title="Process $(i)"))
+        push!(ps2, scatter(t, online[:,2], markersize = 3, markerstrokewidth = 0.2, label="", title="LDH $(i)"))
         if i == 1
             ylabel!("AEW in nm")
         end

@@ -36,7 +36,23 @@ plot_multiple_integrals_AEW(LDH_online, save=false)
 plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.pdf")
 
 # Open-loop simulation of the models 
-ps = simulate_LDH_experiment.(LDH_online, LDH_offline)
+ps = simulate_LDH_experiment.(LDH_online[[1,3,11,21]], LDH_offline[[1,3,11,21]])
+ps2 = plot([p[2] for p in ps]..., size=(1200,350),
+    layout=(1,4),
+    ylabel=["Intensity" "" "" ""],
+    xlabel="Time [h]",
+    title=["(C)" "(D)" "(E)" "(F)"],
+    legendfontsize = 10,
+    titlelocation = :left,
+    bottom_margin=20Plots.px,
+    left_margin=20Plots.px,
+    tickfontsize = 10,
+    xlabelfontsize = 10,
+    ylabelfontsize = 10,
+    grid = false,
+    framestyle = :box,
+    legend = :bottomright)
+savefig(ps2, "figs/FluMo1_openloop_intensity.pdf")
 
 # Simulation of the direct soft sensor (method 1)
 exps = [40,41,42]

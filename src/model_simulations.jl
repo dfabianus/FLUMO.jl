@@ -26,17 +26,19 @@ function simulate_LDH_experiment(online, offline)
     osol  = solve(oprob, Tsit5())
     ts = range(tspan..., length=300)
 
-    p = plot(ts, osol(ts, idxs=sys.cI).u, label = "cI(t)", 
-    xlabel="Time (h)", ylabel="Concentration (mol/L)")
-    p = plot!(ts, osol(ts, idxs=sys.cP+2*sys.cA).u, label = "cP_tot(t)")
-    #scatter!(offline.time./60, offline[!,"c_N "], label = "N(t) data")
-    if "c_p" in names(offline)
-        scatter!(offline.time./60, offline.c_p, label = "P(t) data")
-    else
-        scatter!(offline.time./60, offline.c_P, label = "P(t) data")
-    end
-    p2 = plot(ts, osol(ts, idxs=sys.F).u, label = "model")
-    p2 = plot!(online[!,1]./60, online[!,3], label = "measured") #online[!,2].-online[1,2]
+    # p = plot(ts, osol(ts, idxs=sys.cI).u, label = "cI(t)", 
+    # xlabel="Time (h)", ylabel="Concentration (mol/L)")
+    # p = plot!(ts, osol(ts, idxs=sys.cP+2*sys.cA).u, label = "cP_tot(t)")
+    # #scatter!(offline.time./60, offline[!,"c_N "], label = "N(t) data")
+    # if "c_p" in names(offline)
+    #     scatter!(offline.time./60, offline.c_p, label = "P(t) data")
+    # else
+    #     scatter!(offline.time./60, offline.c_P, label = "P(t) data")
+    # end
+    p = plot(ts, osol(ts, idxs=sys.AEW).u, label = "model", linewidth=4)
+    p = plot!(online[!,1]./60, online[!,2].-online[1,2], label = "measured", color=3) #online[!,2].-online[1,2]
+    p2 = plot(ts, osol(ts, idxs=sys.F).u, label = "model", color=3)
+    p2 = plot!(online[!,1]./60, online[!,3], label = "measured", linewidth=2) #online[!,2].-online[1,2]
     return p, p2
 end
 

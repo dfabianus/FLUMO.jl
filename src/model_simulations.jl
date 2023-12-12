@@ -253,7 +253,7 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     if "cP_theo" in names(offline)
         scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="measured")
     end
-    pt2 = plot(p2, xlabel="Time (h)", size=(400,250), legendfontsize = 7,
+    pt2 = plot(p2, xlabel="Time (h)", size=(400,350), legendfontsize = 7,
     titlelocation = :left,
     bottom_margin=10Plots.px,
     left_margin=10Plots.px,

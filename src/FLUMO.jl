@@ -8,7 +8,8 @@ export corr_I0, corr_aew
 export moving_average, hampel
 export diff_AEW_LDH!
 export plot_multiple_AEW, plot_multiple_dAEW_adapted, plot_multiple_diff_aew, plot_multiple_integrals_AEW
-export plot_AEW_vs_dAEW, plot_AEW_vs_dAEW_b, plot_AEW_vs_dAEW_c
+export plot_AEW_vs_dAEW, plot_AEW_vs_dAEW_b, plot_AEW_vs_dAEW_c, plot_AEW_vs_dAEW_d
+export plot_intensity, plot_intensity_2
 
 using XLSX
 using DataFrames
@@ -29,7 +30,6 @@ using SavitzkyGolay
 using Loess
 using StatsPlots
 using BioprocessingModelLibrary.Refolding
-
 
 include("utils.jl")
 include("preprocessing.jl")

@@ -91,15 +91,17 @@ plot_multiple_dAEW_adapted(GalOx_online, save=false)  # subtract the up pulses
 plot_multiple_diff_aew(GalOx_online, save=false)      # then differentiate
 plot_multiple_integrals_AEW(GalOx_online, save=false) 
 plot_AEW_vs_dAEW_c(GalOx_online[[1,2,4,5,6,7]], GalOx_offline[[1,2,4,5,6,7],"t_cop"], save=true)
+plot_AEW_vs_dAEW_d(GalOx_online[[1,2,4]], GalOx_offline[[1,2,4],"t_cop"], save=true)
+plot_intensity(LDH_online[41]; save=true, filename = filename="figs/intensity_illustration.pdf")
 
 # Soft-sensor validation 
 galox_offline_r = [GalOx_offline[i,:] for i in 1:size(GalOx_offline)[1]]
 pt = simulate_GalOx_soft_sensor.(GalOx_online[[1,2,4,5,6,7]], galox_offline_r[[1,2,4,5,6,7]]; distinct=false)
 pt2 = plot(pt..., layout=(2,3), size=(1000,550),
-    title=["GalOx 1" "GalOx 2" "GalOx 3" "GalOx 4" "GalOx 5" "GalOx 6"],
+    title  = ["GalOx 1" "GalOx 2" "GalOx 3" "GalOx 4" "GalOx 5" "GalOx 6"],
     ylabel = ["Concentration in g/L" "" "" "Concentration in g/L" "" ""],
     xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
-    legend=[false false false :topleft false false])
+    legend = [false false false :topleft false false])
 savefig(pt2, "figs/GalOx_val_1.pdf")
 
 # Soft-sensor validation with distinct N and A --> BAD
@@ -109,13 +111,12 @@ pt2 = plot(pt..., layout=(2,3), size=(1000,550),
     ylabel = ["Concentration in g/L" "" "" "Concentration in g/L" "" ""],
     xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
     legend=[false false false :topleft false false])
-savefig(pt2, "figs/GalOx_val_2.pdf")
-
-
-
-
-
-
+pt3a = plot_intensity_2(GalOx_online[4]; save=false, filename = filename="figs/intensity_illustration.pdf")
+pt3b = plot(pt[3], title = "(B) State estimation of GalOx 3", ylabel = "Concentration in g/L", xlabel = "Time in hours")
+pt3 = plot(pt3a, pt3b, layout=(1,2), size=(1000,350),
+bottom_margin=20Plots.px,
+left_margin=20Plots.px,)
+savefig(pt3, "figs/GalOx_val_2.pdf")
 
 #### --------------- HRP ---------------------------------------------------#
 

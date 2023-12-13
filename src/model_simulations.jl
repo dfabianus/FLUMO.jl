@@ -154,6 +154,9 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
         grid = false,
         framestyle = :box)
     display(pt2)
+
+    online.I_ss = pmean.(osol(t, idxs=sys_simp.I).u)
+    online.dIdt = pmean.(osol(t, idxs=sys_simp.dIdt).u)
     return pt2
 end
 
@@ -241,17 +244,17 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     oprob_ol = ODEProblem(sys_ol, u0_ol, tspan, p_ol)
     osol_ol  = solve(oprob_ol, Tsit5())
 
-    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (direct)", color=1)
+    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (soft-sensor)", color=1)
     if distinct
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "NC (direct)", color=3)
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (direct)", color=4)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "NC (soft-sensor)", color=3)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (soft-sensor)", color=4)
     else
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "A+NC (direct)", color=2)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "A+NC (soft-sensor)", color=2)
         p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cA+sys_ol.cNC).u), label = "A+NC (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
     end
     vline!([offline["t_cop"]/60], label="copper addition", color=6,linewidth=2, linestyle=:dash)
     if "cP_theo" in names(offline)
-        scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="measured")
+        scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="(A+NC) measured")
     end
     pt2 = plot(p2, xlabel="Time (h)", size=(400,350), legendfontsize = 7,
     titlelocation = :left,
@@ -263,5 +266,8 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     grid = false,
     framestyle = :box)
     display(pt2)
+
+    online.I_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.I).u)
+    online.dIdt = pmean.(osol(online[:,1]./60, idxs=sys_simp.dIdt).u)
     return pt2
 end

@@ -65,7 +65,7 @@ function plot_intensity_2(online; save=false, filename="figs/intensity.png")
         title = "(A) Intensity of GalOx 3")
     plot!(online[:,1]./60, online[:,3], label="measured intensity", c=1, linewidth=2.5)
     scatter!([online[1,1]./60], [online[1,3]], label="Initial F at 100% soluble P", c=1, markersize=7)
-    #annotate!(1.75, 2.7E5, text("Insoluble \nAggregates", 4, :right, 15))
+    annotate!(1.75, 1.9E5, text("Cofactor \nqueunching", 4, :center, 15))
     #annotate!(0.65, 2.15E5, text("Soluble \nprotein fraction", :black, :center, 15))
     #annotate!(1.75, 2.7E5, text("Aggregates", 4, :right, 15))
     #plot!(online[[1,end],1]./60, online[[1,1],3], label = "estimated intensity")
@@ -142,7 +142,7 @@ function plot_AEW_vs_dAEW(onlines; save=false, filename="figs/plot_AEW_vs_dAEW.p
         p=scatter(t,online.diff_AEW_raw, markersize = 3, markeralpha=0.4, markerstrokewidth = 0.2, label="Finite Difference",
             xlabel="Time in hours")
         if i == 1
-            ylabel!(L"$\frac{d}{dt}$(AEW) in nm/hour")
+            ylabel!(L"$-\frac{d}{dt}$(AEW) in nm/hour")
         end
         scatter!(t,online.diff_AEW_sgol, markersize = 3, markerstrokewidth = 0.2, markershape = :diamond, label="Savitzky-Golay")
         scatter!(t,online.diff_AEW_loess, markersize = 3, markerstrokewidth = 0.2, markershape = :xcross, label="Loess")
@@ -162,6 +162,7 @@ function plot_AEW_vs_dAEW(onlines; save=false, filename="figs/plot_AEW_vs_dAEW.p
     if save
         savefig(ps_tot, filename)
     end
+    return ps_tot
 end
 
 function plot_AEW_vs_dAEW_b(onlines, t_cop; save=false, filename="figs/plot_AEW_vs_dAEW.png")
@@ -292,13 +293,72 @@ function plot_AEW_vs_dAEW_d(onlines, t_cop; save=false, filename="figs/Galox_dAE
         ylabelfontsize = 10,
         grid = false,
         framestyle = :box,
-        legend=[:topleft false false :topleft false false],
-        ylabel = ["AEW in nm" "" "" L"$\frac{d}{dt}$(AEW) in nm/hour" "" ""],
+        legend=[true false false true false false],
+        ylabel = ["AEW in nm" "" "" L"$-\frac{d}{dt}$(AEW) in nm/hour" "" ""],
         xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
+        title = ["GalOx 2 (0.12M GuHCl)" "GalOx 3 (0.20M GuHCl)" "GalOx 5 (0.60M GuHCl)" "" "" ""]
         )
+        
     display(ps_tot)
     if save
         savefig(ps_tot, filename)
     end
     return ps_tot
+end
+
+function plot_specific_k(LDH_online, GalOx_online, tcop_adapted; save=false, filename="figs/specific_k.pdf")
+    mshapes = [:circle, :utriangle, :star5, :diamond, :hexagon, :dtriangle, 
+    :rtriangle, :ltriangle, :pentagon, :heptagon, :octagon, :star4, :star6, :star7, :star8, :vline, :hline, :+, :x]
+    pl = plot()
+    for (i,online) in enumerate(LDH_online)
+        online.kI_meas = -online.dIdt ./ (online.I_ss.-minimum(online.I_ss))
+        scatter!(online[:,1]./60, online.kI_meas, label="LDH $(i+3)", 
+        xlabel="Time in hours", ylabel="kI",
+        ylim=(0,4), legend = :bottomright,
+        markershape = mshapes[i+3],
+        )
+    end
+    
+    pg = plot()
+    for (i,online) in enumerate(GalOx_online)
+        online.kI_meas = -online.dIdt ./ (online.I_ss.-minimum(online.I_ss))
+        scatter!((online[:,1]./60)[Float64.(online[:,1]) .< tcop_adapted[i]], 
+        online.kI_meas[Float64.(online[:,1]) .< tcop_adapted[i]], 
+        label="GalOx $i", 
+        xlabel="Time in hours", ylabel="kI",
+        ylim=(0,2), legend = :topright,
+        markershape = mshapes[Int(ceil(i/2))],
+        )
+    end
+    
+    pg2 = plot()
+    for (i,online) in enumerate(GalOx_online)
+        scatter!((online[:,1]./60)[Float64.(online[:,1]) .> tcop_adapted[i]] .- (online[:,1]./60)[Float64.(online[:,1]) .> tcop_adapted[i]][1], 
+        online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]], 
+        label="GalOx $i", 
+        xlabel="Time in hours", ylabel="kI", legend = :topright,
+        ylim=(0,25), 
+        markershape = mshapes[Int(ceil(i/2))],
+        )
+    end
+    #GalOx_online[1].dIdt[Float64.(GalOx_online[1][:,1]) .> GalOx_offline.t_cop[1]]
+    pt2 = plot(pl,pg,pg2, layout=(1,3), size=(1000,350),
+        title=["(A) LDH" "(B) GalOx before copper" "(C) GalOx after copper"],
+        ylabel = [L"$k_I$ in 1/hour" "" ""],
+        xlabel = ["Time in hours" "Time in hours"],
+        legendfontsize = 10,
+        titlelocation = :left,
+        bottom_margin=20Plots.px,
+        left_margin=20Plots.px,
+        tickfontsize = 10,
+        xlabelfontsize = 10,
+        ylabelfontsize = 10,
+        grid = false,
+        framestyle = :box,
+        )
+    display(pt2)
+    if save
+        savefig(pt2, filename)
+    end
+    return pt2
 end

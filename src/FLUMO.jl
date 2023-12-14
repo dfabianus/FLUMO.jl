@@ -10,7 +10,7 @@ export diff_AEW_LDH!
 export plot_multiple_AEW, plot_multiple_dAEW_adapted, plot_multiple_diff_aew, plot_multiple_integrals_AEW
 export plot_AEW_vs_dAEW, plot_AEW_vs_dAEW_b, plot_AEW_vs_dAEW_c, plot_AEW_vs_dAEW_d
 export plot_intensity, plot_intensity_2
-export plot_specific_k
+export plot_specific_k, plot_specific_k_violin
 
 using XLSX
 using DataFrames

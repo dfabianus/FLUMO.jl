@@ -343,21 +343,99 @@ function plot_specific_k(LDH_online, GalOx_online, tcop_adapted, GuHCl; save=fal
     end
 
     pl = plot()
+    onlines = []
     for (i,online) in enumerate(GalOx_online)
-        scatter!([GuHCl[i] for j in 1:length(online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]])],
-        online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]], 
-        label="GalOx $i", 
-        xlabel="Guanidine HCl", ylabel="kI", legend = :topright,
-        ylim=(0,50), 
-        markershape = mshapes[Int(ceil(i/2))],
-        )
+        online.GuHCl = [GuHCl[i] for j in 1:length(online.kI_meas)]
+        #scatter!([GuHCl[i] for j in 1:length(online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]])],
+        #online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]], 
+        #label="GalOx $i", 
+        #xlabel="Guanidine HCl", ylabel="kI", legend = :topright,
+        #ylim=(0,50), 
+        #markershape = mshapes[Int(ceil(i/2))],
+        #)
+        online = online[Float64.(online[:,1]) .> tcop_adapted[i],:]
+        if GuHCl[i] == 0.12
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+0.2*60,:]
+        elseif GuHCl[i] == 0.2
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+0.5*60,:]
+        else
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+60,:]
+        end
+        push!(onlines, online)
     end
-
+    df = vcat(onlines...)
+    replace!(df.kI_meas, missing=>0, Inf=>0, NaN=>0)
+    df = df[df.kI_meas .> 0,:]
+    p = violin(string.(df.GuHCl), df.kI_meas, line = 0, fill = (0.2, :blue))
+    boxplot!(string.(df.GuHCl), df.kI_meas, line = (2, :black), fill = (0.3, :orange), ylim=(0,25))
     #GalOx_online[1].dIdt[Float64.(GalOx_online[1][:,1]) .> GalOx_offline.t_cop[1]]
-    pt2 = plot(pg,pg2, pl, layout=(1,3), size=(1000,350),
+    pt2 = plot(pg,pg2, p, layout=(1,3), size=(1000,350),
         title=["(A) LDH" "(B) GalOx before copper" "(C) GalOx after copper"],
         ylabel = [L"$k_I$ in 1/hour" "" ""],
         xlabel = ["Time in hours" "Time in hours"],
+        legendfontsize = 10,
+        titlelocation = :left,
+        bottom_margin=20Plots.px,
+        left_margin=20Plots.px,
+        tickfontsize = 10,
+        xlabelfontsize = 10,
+        ylabelfontsize = 10,
+        grid = false,
+        framestyle = :box,
+        )
+    display(pt2)
+    if save
+        savefig(pt2, filename)
+    end
+    return pt2
+end
+
+
+function plot_specific_k_violin(LDH_online, GalOx_online, tcop_adapted, GuHCl; save=false, filename="figs/specific_k.pdf")
+    onlines = []
+    for (i,online) in enumerate(GalOx_online)
+        online.GuHCl = [GuHCl[i] for j in 1:length(online.kI_meas)]
+        online = online[Float64.(online[:,1]) .< tcop_adapted[i],:]
+        if GuHCl[i] == 0.12
+            online = online[Float64.(online[:,1]) .< 20,:]
+        elseif GuHCl[i] == 0.2
+            online = online[Float64.(online[:,1]) .< 20,:]
+        else
+            #online = online[Float64.(online[:,1]) .< tcop_adapted[i],:]
+        end
+        push!(onlines, online)
+    end
+    df = vcat(onlines...)
+    replace!(df.kI_meas, missing=>0, Inf=>0, NaN=>0)
+    df = df[df.kI_meas .> 0,:]
+    p = violin(string.(df.GuHCl), df.kI_meas, line = 0, fill = (0.2, :blue), label = "")
+    boxplot!(string.(df.GuHCl), df.kI_meas, line = (2, :black), 
+        fill = (0.3, :orange), ylim=(0,1.75), label = "")
+    
+    onlines = []
+    for (i,online) in enumerate(GalOx_online)
+        online.GuHCl = [GuHCl[i] for j in 1:length(online.kI_meas)]
+        online = online[Float64.(online[:,1]) .> tcop_adapted[i],:]
+        if GuHCl[i] == 0.12
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+0.2*60,:]
+        elseif GuHCl[i] == 0.2
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+0.5*60,:]
+        else
+            online = online[Float64.(online[:,1]) .< tcop_adapted[i].+60,:]
+        end
+        push!(onlines, online)
+    end
+    df = vcat(onlines...)
+    replace!(df.kI_meas, missing=>0, Inf=>0, NaN=>0)
+    df = df[df.kI_meas .> 0,:]
+    p2 = violin(string.(df.GuHCl), df.kI_meas, line = 0, fill = (0.2, :blue), label = "")
+    boxplot!(string.(df.GuHCl), df.kI_meas, line = (2, :black), 
+        fill = (0.3, :orange), ylim=(0,25), label = "", legend = :topright)
+    
+    pt2 = plot(p, p2, layout=(1,2), size=(650,350),
+        title=["(A) GalOx before copper" "(B) GalOx after copper"],
+        ylabel = [L"$k_I$ in 1/hour" L"$k_I$ in 1/hour"],
+        xlabel = ["GuHCl in M" "GuHCl in M"],
         legendfontsize = 10,
         titlelocation = :left,
         bottom_margin=20Plots.px,

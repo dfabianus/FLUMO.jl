@@ -306,18 +306,18 @@ function plot_AEW_vs_dAEW_d(onlines, t_cop; save=false, filename="figs/Galox_dAE
     return ps_tot
 end
 
-function plot_specific_k(LDH_online, GalOx_online, tcop_adapted; save=false, filename="figs/specific_k.pdf")
+function plot_specific_k(LDH_online, GalOx_online, tcop_adapted, GuHCl; save=false, filename="figs/specific_k.pdf")
     mshapes = [:circle, :utriangle, :star5, :diamond, :hexagon, :dtriangle, 
     :rtriangle, :ltriangle, :pentagon, :heptagon, :octagon, :star4, :star6, :star7, :star8, :vline, :hline, :+, :x]
-    pl = plot()
-    for (i,online) in enumerate(LDH_online)
-        online.kI_meas = -online.dIdt ./ (online.I_ss.-minimum(online.I_ss))
-        scatter!(online[:,1]./60, online.kI_meas, label="LDH $(i+3)", 
-        xlabel="Time in hours", ylabel="kI",
-        ylim=(0,4), legend = :bottomright,
-        markershape = mshapes[i+3],
-        )
-    end
+    # pl = plot()
+    # for (i,online) in enumerate(LDH_online)
+    #     online.kI_meas = -online.dIdt ./ (online.I_ss.-minimum(online.I_ss))
+    #     scatter!(online[:,1]./60, online.kI_meas, label="LDH $(i+3)", 
+    #     xlabel="Time in hours", ylabel="kI",
+    #     ylim=(0,4), legend = :bottomright,
+    #     markershape = mshapes[i+3],
+    #     )
+    # end
     
     pg = plot()
     for (i,online) in enumerate(GalOx_online)
@@ -341,8 +341,20 @@ function plot_specific_k(LDH_online, GalOx_online, tcop_adapted; save=false, fil
         markershape = mshapes[Int(ceil(i/2))],
         )
     end
+
+    pl = plot()
+    for (i,online) in enumerate(GalOx_online)
+        scatter!([GuHCl[i] for j in 1:length(online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]])],
+        online.kI_meas[Float64.(online[:,1]) .> tcop_adapted[i]], 
+        label="GalOx $i", 
+        xlabel="Guanidine HCl", ylabel="kI", legend = :topright,
+        ylim=(0,50), 
+        markershape = mshapes[Int(ceil(i/2))],
+        )
+    end
+
     #GalOx_online[1].dIdt[Float64.(GalOx_online[1][:,1]) .> GalOx_offline.t_cop[1]]
-    pt2 = plot(pl,pg,pg2, layout=(1,3), size=(1000,350),
+    pt2 = plot(pg,pg2, pl, layout=(1,3), size=(1000,350),
         title=["(A) LDH" "(B) GalOx before copper" "(C) GalOx after copper"],
         ylabel = [L"$k_I$ in 1/hour" "" ""],
         xlabel = ["Time in hours" "Time in hours"],

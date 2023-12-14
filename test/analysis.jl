@@ -118,4 +118,11 @@ pt2 = plot([pm[1], pm2]..., layout=(2,3), size=(1000,550),
     legend=[false false false :topleft false false])
 
 # specific kI over time LDH
-plot_specific_k(LDH_online[exps_galox], GalOx_online[exps_galox],GalOx_offline.t_cop[exps_galox]; save=true)
+plot_specific_k(LDH_online[exps_galox], GalOx_online[exps_galox],GalOx_offline.t_cop[exps_galox], 
+    GalOx_offline.GuHCl[exps_galox]; save=false)
+
+
+using StatsPlots, RDatasets
+singers = RDatasets.dataset("lattice", "singer")
+@df singers violin(:VoicePart, :Height, line = 0, fill = (0.2, :blue))
+@df singers boxplot!(:VoicePart, :Height, line = (2, :black), fill = (0.3, :orange))

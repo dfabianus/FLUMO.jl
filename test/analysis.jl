@@ -18,6 +18,9 @@ HRP_online = get_HRP_data()
 
 #### --------------- LDH ---------------------------------------------------#
 
+# correlation AEW to total reaction rate 
+CSV.read("data/dAEW_NA_data.csv", DataFrame)
+
 # numeric differentiation of AEW
 diff_AEW_LDH!.(LDH_online) 
 

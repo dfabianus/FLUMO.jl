@@ -97,7 +97,7 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
         p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N (soft-sensor)", color=3)
         p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (soft-sensor)", color=4)
     else
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "N+A (direct)", color=2)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "N+A (soft-sensor)", color=2)
         p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cN+sys_ol.cA).u), label = "N+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
     end
         # if "c_p" in names(offline)
@@ -156,8 +156,34 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
     display(pt2)
 
     online.I_ss = pmean.(osol(t, idxs=sys_simp.I).u)
+    online.NA_ss = pmean.(osol(t, idxs=sys_simp.N+sys_simp.A).u)
+    online.N_ss = pmean.(osol(t, idxs=sys_simp.N).u)
+    online.A_ss = pmean.(osol(t, idxs=sys_simp.A).u)
     online.dIdt = pmean.(osol(t, idxs=sys_simp.dIdt).u)
-    return pt2
+
+    if "A" in names(offline)
+        NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))
+        NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))
+        NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))
+        NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))
+        NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))
+    elseif "c_A" in names(offline)
+        NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))
+        NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))
+        NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))
+        NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))
+        NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))
+    else
+        NRMSE_NA = 0.
+        NRMSE_N = 0.
+        NRMSE_A = 0.
+        NRMSE_NA_ol = 0.
+        NRMSE_N_ol = 0.
+        NRMSE_A_ol = 0.
+    end
+    return pt2, NRMSE_NA, NRMSE_N, NRMSE_A, NRMSE_NA_ol, NRMSE_N_ol, NRMSE_A_ol
 end
 
 function simulate_GalOx_experiment(online, offline)
@@ -249,12 +275,12 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
         p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "NC (soft-sensor)", color=3)
         p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (soft-sensor)", color=4)
     else
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "A+NC (soft-sensor)", color=2)
-        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cA+sys_ol.cNC).u), label = "A+NC (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "NC+A (soft-sensor)", color=2)
+        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cA+sys_ol.cNC).u), label = "NC+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
     end
     vline!([offline["t_cop"]/60], label="copper addition", color=6,linewidth=2, linestyle=:dash)
     if "cP_theo" in names(offline)
-        scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="(A+NC) measured")
+        scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="(NC+A) measured")
     end
     pt2 = plot(p2, xlabel="Time (h)", size=(400,350), legendfontsize = 7,
     titlelocation = :left,
@@ -268,6 +294,14 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     display(pt2)
 
     online.I_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.I).u)
+    online.NA_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)
+    online.N_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.N).u)
+    online.A_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.A).u)
     online.dIdt = pmean.(osol(online[:,1]./60, idxs=sys_simp.dIdt).u)
+
+    NRMSE_NA = sqrt((offline.cP_theo - pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)[end])^2)
+    NRMSE_NA_ol = sqrt((offline.cP_theo .- pmean.(osol_ol(online[:,1]./60, idxs=sys_ol.cN+sys_ol.cA).u)[end])^2)
+
+    return pt2, NRMSE_NA, NRMSE_NA_ol
     return pt2
 end

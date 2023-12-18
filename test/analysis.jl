@@ -14,9 +14,10 @@ using LaTeXStrings
 
 LDH_online, LDH_offline = get_LDH_data()
 GalOx_online, GalOx_offline = get_GalOx_data()
-HRP_online = get_HRP_data()
+#HRP_online = get_HRP_data()
 
 #### --------------- LDH ---------------------------------------------------#
+exps = [11,12,18,13,14,16,40,41,42]
 
 # correlation AEW to total reaction rate 
 CSV.read("data/dAEW_NA_data.csv", DataFrame)
@@ -34,7 +35,7 @@ plot_multiple_dAEW_adapted(LDH_online, save=false)  # subtract the up pulses
 plot_multiple_diff_aew(LDH_online, save=false)      # then differentiate
 
 # When reintegrate the obtained derivative, we see different degrees of errors 
-plot_multiple_integrals_AEW(LDH_online, save=false) 
+plot_multiple_integrals_AEW(LDH_online[exps], save=false) 
 
 # Illustration of derivative 
 plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.pdf")
@@ -60,8 +61,14 @@ savefig(ps2, "figs/FluMo1_openloop_intensity.pdf")
 
 # Soft-sensor validation 
 exps = [13,14,16,40,41,42]
-pt = simulate_LDH_soft_sensor.(LDH_online[exps], LDH_offline[exps],distinct=false)
-pt2 = plot(pt..., layout=(2,3), size=(1000,550),
+sim_LDH = simulate_LDH_soft_sensor.(LDH_online[exps], LDH_offline[exps],distinct=false)
+NRMSE_NA = [s[2] for s in sim_LDH[3:end]]; mean(NRMSE_NA); std(NRMSE_NA)
+NRMSE_N = [s[3] for s in sim_LDH[3:end]]; mean(NRMSE_N); std(NRMSE_N)
+NRMSE_A = [s[4] for s in sim_LDH[3:end]]; mean(NRMSE_A); std(NRMSE_A)
+NRMSE_NA_ol = [s[5] for s in sim_LDH[3:end]]; mean(NRMSE_NA_ol[5:7]); std(NRMSE_NA_ol)
+NRMSE_N_ol = [s[6] for s in sim_LDH[3:end]]; mean(NRMSE_N_ol); std(NRMSE_N_ol)
+NRMSE_A_ol = [s[7] for s in sim_LDH[3:end]]; mean(NRMSE_A_ol); std(NRMSE_A_ol)
+pt2 = plot([s[1] for s in sim_LDH]..., layout=(2,3), size=(1000,550),
     title=["LDH 4" "LDH 5" "LDH 6" "LDH 7" "LDH 8" "LDH 9"],
     ylabel = ["Concentration in g/L" "" "" "Concentration in g/L" "" ""],
     xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
@@ -86,15 +93,17 @@ diff_AEW_LDH!.(GalOx_online)
 plot_multiple_AEW(GalOx_online, save=false)           # first the raw AEW
 plot_multiple_dAEW_adapted(GalOx_online, save=false)  # subtract the up pulses
 plot_multiple_diff_aew(GalOx_online, save=false)      # then differentiate
-plot_multiple_integrals_AEW(GalOx_online, save=false) 
+plot_multiple_integrals_AEW(GalOx_online[exps_galox], save=false) 
 plot_AEW_vs_dAEW_c(GalOx_online[exps_galox], GalOx_offline[exps_galox,"t_cop"], save=false)
 plot_AEW_vs_dAEW_d(GalOx_online[[6,1,2]], GalOx_offline[[6,1,2],"t_cop"], save=true)
 plot_intensity(LDH_online[41]; save=true, filename = filename="figs/intensity_illustration.pdf")
 
 # Soft-sensor validation 
 galox_offline_r = [GalOx_offline[i,:] for i in 1:size(GalOx_offline)[1]]
-pt = simulate_GalOx_soft_sensor.(GalOx_online[exps_galox], galox_offline_r[exps_galox]; distinct=false)
-pt2 = plot(pt..., layout=(2,3), size=(1000,550),
+sim_GalOx = simulate_GalOx_soft_sensor.(GalOx_online[exps_galox], galox_offline_r[exps_galox]; distinct=false)
+NRMSE_NA = [s[2] for s in sim_GalOx[1:end-1]]; mean(NRMSE_NA); std(NRMSE_NA)
+NRMSE_NA_ol = [s[3] for s in sim_GalOx[1:end-1]]; mean(NRMSE_NA_ol); std(NRMSE_NA_ol)
+pt2 = plot([s[1] for s in sim_GalOx]..., layout=(2,3), size=(1000,550),
     title  = ["GalOx 1" "GalOx 2" "GalOx 3" "GalOx 4" "GalOx 5" "GalOx 6"],
     ylabel = ["Concentration in g/L" "" "" "Concentration in g/L" "" ""],
     xlabel = ["" "" "" "Time in hours" "Time in hours" "Time in hours"],
@@ -102,7 +111,8 @@ pt2 = plot(pt..., layout=(2,3), size=(1000,550),
 savefig(pt2, "figs/GalOx_val_1.pdf")
 
 # Soft-sensor validation with distinct N and A --> BAD
-pt = simulate_GalOx_soft_sensor.(GalOx_online[exps_galox], galox_offline_r[exps_galox]; distinct=true)
+sim_GalOx_distinct = simulate_GalOx_soft_sensor.(GalOx_online[exps_galox], galox_offline_r[exps_galox]; distinct=true)
+pt = [p[1] for p in sim_GalOx_distinct]
 pt3a = plot_intensity_2(GalOx_online[4]; save=false, filename = filename="figs/intensity_illustration.pdf")
 pt3b = plot(pt[3], title = "(B) State estimation of GalOx 3", ylabel = "Concentration in g/L", xlabel = "Time in hours")
 pt3 = plot(pt3a, pt3b, layout=(1,2), size=(1000,350),

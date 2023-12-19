@@ -11,6 +11,7 @@ export plot_multiple_AEW, plot_multiple_dAEW_adapted, plot_multiple_diff_aew, pl
 export plot_AEW_vs_dAEW, plot_AEW_vs_dAEW_b, plot_AEW_vs_dAEW_c, plot_AEW_vs_dAEW_d
 export plot_intensity, plot_intensity_2
 export plot_specific_k, plot_specific_k_violin
+export create_observer, FLUMO_discrete, FLUMO_discrete_measurement
 
 using XLSX
 using DataFrames
@@ -40,6 +41,6 @@ include("flumo_archive.jl")
 include("parameters.jl")
 include("model_simulations.jl")
 include("plot_functions.jl")
-
+include("UKF.jl")
 
 end

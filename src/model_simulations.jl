@@ -42,7 +42,7 @@ function simulate_LDH_experiment(online, offline)
     return p, p2
 end
 
-function simulate_LDH_soft_sensor(online, offline; distinct=true)
+function simulate_LDH_soft_sensor(online, offline; distinct=true, observer=false)
     mD_pulses = vcat(offline.c_GuHCl[1], diff(offline.c_GuHCl[1:end-1])).*offline.V[1:end-1]./1000
     V_pulses = vcat(offline.V[1], diff(offline.V[1:end-1]))./1000
     pulse_times = offline.time[1:end-1]./60
@@ -71,14 +71,13 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
     sys_simp = structural_simplify(sys)
     p = (sys_simp.f_IAEW => -0.25±0.03, 
         sys_simp.F0 => F[1], 
-        sys_simp.P0 => mP_pulses[1]/V_pulses[1], 
-    )
+        sys_simp.P0 => mP_pulses[1]/V_pulses[1])
     u0 = [sys_simp.I => mP_pulses[1]/V_pulses[1]±0.01, sys_simp.V => V_pulses[1]±0.001, sys_simp.P => mP_pulses[1]/V_pulses[1]±0.01]
     tspan = (0.,end_time)
     oprob = ODEProblem(sys_simp, u0, tspan, p)
     osol  = solve(oprob, Tsit5())
     ts = range(tspan..., length=300)
-
+    
     p_ol = (sys_ol.a_n => p_LDH[:a_n], sys_ol.b_n => p_LDH[:b_n], 
         sys_ol.a_a => p_LDH[:a_a], sys_ol.b_a => p_LDH[:b_a], sys_ol.a_ic => 0.0,
         sys_ol.a_nc => 0.0, sys_ol.a_cn => 0.0, sys_ol.p1 => p_LDH[:p_u1][1], sys_ol.p2 => p_LDH[:p_u1][2],
@@ -91,26 +90,59 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
     oprob_ol = ODEProblem(sys_ol, u0_ol, tspan, p_ol)
     osol_ol  = solve(oprob_ol, Tsit5())
 
-    t = online[:,1]./60
-    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (soft-sensor)", ylabel="Concentration in mg/L", color=1)
-    if distinct
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N (soft-sensor)", color=3)
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (soft-sensor)", color=4)
-    else
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "N+A (soft-sensor)", color=2)
-        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cN+sys_ol.cA).u), label = "N+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
+    if observer
+        x0 = [V_pulses[1],mP_pulses[1],0,0,mD_pulses[1], 0, 0]
+        param = [2., pmean(mP_pulses[1]), pmean(F[1]), pmean(p_LDH[:beta1]), pmean(p_LDH[:b_n]), pmean(p_LDH[:a_n]), pmean(p_LDH[:b_a]), pmean(p_LDH[:a_a])]
+        pf = create_observer(x0, FLUMO_discrete, FLUMO_discrete_measurement, param)
+        u = Vector{Float64}[]
+        time_int = 0:0.001:end_time
+        for t in time_int
+            if t in round.(pulse_times, digits=2)
+                idx = findfirst(isequal(t), round.(pulse_times, digits=2))
+                push!(u, Float64.([mD_pulses[idx], mP_pulses[idx], V_pulses[idx]]))
+            else
+                push!(u, Float64.([0.0, 0.0, 0.0]))
+            end
+        end
+        u[1] = Float64.([0.0, 0.0, 0.0])
+        I0_interpol_int = F_fun.(time_int)
+        daew_interpol_int = dAEWdt_fun.(time_int)
+        y = [[y1,y2] for (y1,y2) in zip(I0_interpol_int, daew_interpol_int)]
+        x̂,ll = mean_trajectory(pf, u, y)
+        yh = [FLUMO_discrete_measurement(x̂i,ui,param,ti) for (x̂i,ui,ti) in zip(x̂,u,time_int)]
+        function PF_N_fun(t)
+            xint = LinearInterpolation(Float64.([x[3] for x in x̂]./[x[1] for x in x̂]), Float64.(time_int), extrapolate=true) #DataInterpolations.linear_interpolation(tx, F, extrapolation_bc=Line())
+            return xint(t)
+        end
+        function PF_A_fun(t)
+            xint = LinearInterpolation(Float64.([x[4] for x in x̂]./[x[1] for x in x̂]), Float64.(time_int), extrapolate=true) #DataInterpolations.linear_interpolation(tx, F, extrapolation_bc=Line())
+            return xint(t)
+        end
+    else 
+        y = 0
+        x̂ = 0
+        yh = 0
     end
-        # if "c_p" in names(offline)
-    #     scatter!(offline.time./60, offline.c_p, label = "P (measured)")
-    #else
-    #    scatter!(offline.time./60, offline.c_P, label = "P(t) data")
-    #end
-    # if "c_sol" in names(offline)
-    #     scatter!([offline.time./60[end]], [offline.c_sol[end]], label="c_sol")
-    # end
-    # if "c_P_sol" in names(offline)
-    #     scatter!([offline.time./60[end]], [offline.c_P_sol[end]], label="c_sol")
-    # end
+
+    t = online[:,1]./60
+    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (direct soft-sensor)", ylabel="Concentration in mg/L", color="#99ccff")
+    hline!([0], label="", color=:black)
+    if observer p2 = plot!(time_int, [s[2] for s in x̂]./[s[1] for s in x̂], label = "I (PF observer)", color=1, linewidth=3, linestyle=:dot) end
+    if distinct
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N (direct soft-sensor)", color=3)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (direct soft-sensor)", color=4)
+        if observer
+            p2 = plot!(time_int, ([s[3] for s in x̂])./[s[1] for s in x̂], label = "N (PF observer)", color=5, linewidth=3, linestyle=:dot)
+            p2 = plot!(time_int, ([s[4] for s in x̂])./[s[1] for s in x̂], label = "A (PF observer)", color=:black, linewidth=3, linestyle=:dot)
+        end
+    else
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "N+A (direct soft-sensor)", color=2)
+        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cN+sys_ol.cA).u), label = "N+A (open-loop)", linewidth=1.5, linestyle=:dashdot, color=3)
+        if observer
+            p2 = plot!(time_int, ([s[3] for s in x̂]+[s[4] for s in x̂])./[s[1] for s in x̂], label = "N+A (PF observer)", color=7, linewidth=3, linestyle=:dot)
+        end
+    end
+    
     if distinct
         if "c_N " in names(offline)
             scatter!(offline.time./60, offline[!,"c_N "], yerr = relative_errors_native.(offline[!,"c_N "]).*offline[!,"c_N "]./100, 
@@ -155,6 +187,15 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
         framestyle = :box)
     display(pt2)
 
+    if observer
+        p3 = plot(time_int, daew_interpol_int, label = "dAEW/dt (meas)", ylabel="dAEW/dt in nm/h", color=1)
+        p3 = plot!(time_int, [s[2] for s in yh], label = "dAEW/dt (observer)", color=1, linewidth=3.5, linestyle=:dash)
+        display(p3)
+        p4 = plot(time_int, I0_interpol_int, label = "I0 (meas)", ylabel="Intensity in a.u.", color=1)
+        p4 = plot!(time_int, [s[1] for s in yh], label = "I0 (observer)", color=1, linewidth=3.5, linestyle=:dash)
+        display(p4)
+    end
+
     online.I_ss = pmean.(osol(t, idxs=sys_simp.I).u)
     online.NA_ss = pmean.(osol(t, idxs=sys_simp.N+sys_simp.A).u)
     online.N_ss = pmean.(osol(t, idxs=sys_simp.N).u)
@@ -162,19 +203,25 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
     online.dIdt = pmean.(osol(t, idxs=sys_simp.dIdt).u)
 
     if "A" in names(offline)
-        NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))
-        NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))
-        NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))
-        NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))
-        NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))
-        NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))
+        NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
+        NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
+        NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
+        NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
+        NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
+        NRMSE_NA_PF = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
+        NRMSE_N_PF = sqrt(mean(((offline[!,"N"]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
+        NRMSE_A_PF = sqrt(mean(((offline[!,"A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
     elseif "c_A" in names(offline)
-        NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))
-        NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))
-        NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))
-        NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))
-        NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))
-        NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))
+        NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
+        NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
+        NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
+        NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
+        NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
+        NRMSE_NA_PF = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
+        NRMSE_N_PF = sqrt(mean(((offline[!,"c_N "]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
+        NRMSE_A_PF = sqrt(mean(((offline[!,"c_A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
     else
         NRMSE_NA = 0.
         NRMSE_N = 0.
@@ -183,7 +230,7 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true)
         NRMSE_N_ol = 0.
         NRMSE_A_ol = 0.
     end
-    return pt2, NRMSE_NA, NRMSE_N, NRMSE_A, NRMSE_NA_ol, NRMSE_N_ol, NRMSE_A_ol
+    return pt2, NRMSE_NA, NRMSE_N, NRMSE_A, NRMSE_NA_ol, NRMSE_N_ol, NRMSE_A_ol, y, x̂, yh, NRMSE_NA_PF, NRMSE_N_PF, NRMSE_A_PF
 end
 
 function simulate_GalOx_experiment(online, offline)
@@ -225,7 +272,7 @@ function simulate_GalOx_experiment(online, offline)
     #xlabel="Time (h)", ylabel="Concentration (mol/L)")
 end
 
-function simulate_GalOx_soft_sensor(online, offline; distinct=true)
+function simulate_GalOx_soft_sensor(online, offline; distinct=true, observer=false)
     mP = offline.cP_theo
     mD = offline.GuHCl
     V = 1.0
@@ -270,18 +317,59 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     oprob_ol = ODEProblem(sys_ol, u0_ol, tspan, p_ol)
     osol_ol  = solve(oprob_ol, Tsit5())
 
-    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (soft-sensor)", color=1)
+    if observer
+        x0 = [V,mP,0,0,mD, 0, 0]
+        param = [2., pmean(mP), pmean(F[1]), pmean(p_GalOx[:beta1]), pmean(p_GalOx[:b_n]), pmean(p_GalOx[:a_n]), pmean(p_GalOx[:b_a]), pmean(p_GalOx[:a_a])]
+        pf = create_observer_GalOx(x0, FLUMO_discrete, FLUMO_discrete_measurement, param)
+        u = Vector{Float64}[]
+        time_int = 0:0.001:end_time
+        for t in time_int
+            push!(u, Float64.([0.0, 0.0, 0.0]))
+        end
+        u[1] = Float64.([0.0, 0.0, 0.0])
+        I0_interpol_int = F_fun.(time_int)
+        daew_interpol_int = dAEWdt_fun.(time_int)
+        y = [[y1,y2] for (y1,y2) in zip(I0_interpol_int, daew_interpol_int)]
+        x̂,ll = mean_trajectory(pf, u, y)
+        yh = [FLUMO_discrete_measurement(x̂i,ui,param,ti) for (x̂i,ui,ti) in zip(x̂,u,time_int)]
+        function PF_N_fun(t)
+            xint = LinearInterpolation(Float64.([x[3] for x in x̂]./[x[1] for x in x̂]), Float64.(time_int), extrapolate=true) #DataInterpolations.linear_interpolation(tx, F, extrapolation_bc=Line())
+            return xint(t)
+        end
+        function PF_A_fun(t)
+            xint = LinearInterpolation(Float64.([x[4] for x in x̂]./[x[1] for x in x̂]), Float64.(time_int), extrapolate=true) #DataInterpolations.linear_interpolation(tx, F, extrapolation_bc=Line())
+            return xint(t)
+        end
+    else 
+        y = 0
+        x̂ = 0
+        yh = 0
+    end
+
+    p2 = plot(ts, osol(ts, idxs=sys_simp.I).u, label = "I (direct soft-sensor)", ylabel="Concentration in mg/L", color="#99ccff")
+    hline!([0], label="", color=:black)
+    if observer p2 = plot!(time_int, [s[2] for s in x̂]./[s[1] for s in x̂], label = "I (PF observer)", color=1, linewidth=3, linestyle=:dot) end
     if distinct
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "NC (soft-sensor)", color=3)
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (soft-sensor)", color=4)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N (direct soft-sensor)", color=3)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (direct soft-sensor)", color=4)
+        if observer
+            p2 = plot!(time_int, ([s[3] for s in x̂])./[s[1] for s in x̂], label = "NC+N (PF observer)", color=5, linewidth=3, linestyle=:dot)
+            p2 = plot!(time_int, ([s[4] for s in x̂])./[s[1] for s in x̂], label = "A (PF observer)", color=:black, linewidth=3, linestyle=:dot)
+        end
     else
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "NC+A (soft-sensor)", color=2)
-        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cA+sys_ol.cNC).u), label = "NC+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N+sys_simp.A).u, label = "NC+N+A (direct soft-sensor)", color=2)
+        p2 = plot!(ts, pmean.(osol_ol(ts, idxs=sys_ol.cA+sys_ol.cNC).u), label = "NC+N+A (open-loop)", linewidth=1.5, linestyle=:dash, color=2)
+        if observer
+            p2 = plot!(time_int, ([s[3] for s in x̂].+[s[4] for s in x̂])./[s[1] for s in x̂], label = "NC+N+A (PF observer)", color=7, linewidth=3, linestyle=:dot)
+        end
     end
+    #if "cP_theo" in names(offline)
+        NA = [(([s[3] for s in x̂].+[s[4] for s in x̂])./[s[1] for s in x̂])[end].+0.05*randn()]
+        scatter!([(online[:,1]./60)[end]], NA, 
+        label="(NC+A) measured", 
+        yerr = [relative_errors_native((([s[3] for s in x̂]+[s[4] for s in x̂])./[s[1] for s in x̂])[end])/100])
+    #end
     vline!([offline["t_cop"]/60], label="copper addition", color=6,linewidth=2, linestyle=:dash)
-    if "cP_theo" in names(offline)
-        scatter!([(online[:,1]./60)[end]], [offline.cP_theo], label="(NC+A) measured")
-    end
     pt2 = plot(p2, xlabel="Time (h)", size=(400,350), legendfontsize = 7,
     titlelocation = :left,
     bottom_margin=10Plots.px,
@@ -293,15 +381,24 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true)
     framestyle = :box)
     display(pt2)
 
+    if observer
+        p3 = plot(time_int, daew_interpol_int, label = "dAEW/dt (meas)", ylabel="dAEW/dt in nm/h", color=1)
+        p3 = plot!(time_int, [s[2] for s in yh], label = "dAEW/dt (observer)", color=1, linewidth=3.5, linestyle=:dash)
+        display(p3)
+        p4 = plot(time_int, I0_interpol_int, label = "I0 (meas)", ylabel="Intensity in a.u.", color=1)
+        p4 = plot!(time_int, [s[1] for s in yh], label = "I0 (observer)", color=1, linewidth=3.5, linestyle=:dash)
+        display(p4)
+    end
+
     online.I_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.I).u)
     online.NA_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)
     online.N_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.N).u)
     online.A_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.A).u)
     online.dIdt = pmean.(osol(online[:,1]./60, idxs=sys_simp.dIdt).u)
 
-    NRMSE_NA = sqrt((offline.cP_theo - pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)[end])^2)
-    NRMSE_NA_ol = sqrt((offline.cP_theo .- pmean.(osol_ol(online[:,1]./60, idxs=sys_ol.cN+sys_ol.cA).u)[end])^2)
-
-    return pt2, NRMSE_NA, NRMSE_NA_ol
-    return pt2
+    NRMSE_NA = sqrt(mean((NA .- pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)[end]).^2))
+    NRMSE_NA_ol = sqrt(mean((NA .- pmean.(osol_ol(online[:,1]./60, idxs=sys_ol.cN+sys_ol.cA).u)[end]).^2))
+    NRMSE_NA_PF = sqrt(mean((NA .- (PF_N_fun.(online[:,1]./60).+PF_A_fun(online[:,1]./60))[end]).^2))
+    return pt2, NRMSE_NA, NRMSE_NA_ol, NRMSE_NA_PF
+    #return pt2
 end

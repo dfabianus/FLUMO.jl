@@ -1,4 +1,4 @@
-,Process Time [min],d(c_N + c_A)/dt,- AEW_smoothened_derivative,Run
+,Process Time [min],x,y,Run
 0,0.0,,0.0310733919060849,run_40
 19,30.0,0.0033285905149436088,0.022328465004636627,run_40
 41,60.0,0.00014230206428013646,0.008163682075546871,run_40

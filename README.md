@@ -6,3 +6,5 @@
 [![Build Status](https://travis-ci.com/dfabianus/FLUMO-modeling-paper.jl.svg?branch=master)](https://travis-ci.com/dfabianus/FLUMO-modeling-paper.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/dfabianus/FLUMO-modeling-paper.jl?svg=true)](https://ci.appveyor.com/project/dfabianus/FLUMO-modeling-paper-jl)
 [![Coverage](https://codecov.io/gh/dfabianus/FLUMO-modeling-paper.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/dfabianus/FLUMO-modeling-paper.jl)
+
+This repository contains data analysis tools and soft-sensor approaches for real-time state estimation of protein refolding experiments with intrinsic fluorescence.

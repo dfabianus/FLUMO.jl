@@ -62,7 +62,7 @@ function plot_intensity_2(online; save=false, filename="figs/intensity.png")
         linewidth =0,
         #ylim=(2E5,3E5),
         xlim=(-0.03,online[end,1]./60),
-        title = "(A) Intensity of GalOx 3")
+        title = "(A) Intensity of GalOx 4")
     plot!(online[:,1]./60, online[:,3], label="measured intensity", c=1, linewidth=2.5)
     scatter!([online[1,1]./60], [online[1,3]], label="Initial F at 100% soluble P", c=1, markersize=7)
     annotate!(1.75, 1.9E5, text("Fluorescence \nquenching", 4, :center, 15))
@@ -433,7 +433,7 @@ function plot_specific_k_violin(LDH_online, GalOx_online, tcop_adapted, GuHCl; s
         fill = (0.3, :orange), ylim=(0,25), label = "", legend = :topright)
     
     pt2 = plot(p, p2, layout=(1,2), size=(650,350),
-        title=["(A) GalOx before copper" "(B) GalOx after copper"],
+        title=["(A) GalOx prior to copper addition" "(B) GalOx after copper addition"],
         ylabel = [L"$k_I$ in 1/hour" L"$k_I$ in 1/hour"],
         xlabel = ["GuHCl in M" "GuHCl in M"],
         legendfontsize = 10,

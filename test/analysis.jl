@@ -63,12 +63,29 @@ plot_multiple_integrals_AEW(LDH_online[exps], save=false)
 plot_AEW_vs_dAEW(LDH_online[[11,12,8]], save=true, filename="figs/plot_AEW_vs_dAEW.pdf")
 
 # Open-loop simulation of the models 
-ps = simulate_LDH_experiment.(LDH_online[[1,3,11,21]], LDH_offline[[1,3,11,21]])
-ps2 = plot([p[2] for p in ps]..., size=(1200,350),
-    layout=(1,4),
-    ylabel=["Intensity" "" "" ""],
+
+# function relative(f, r; sp)
+#     p = plot!()
+#     lims = f(p[sp])
+#     return lims[1] + r * (lims[2]-lims[1])
+# end
+# relativex(r; sp::Int=1) = relative(Plots.xlims, r; sp=sp)
+# relativey(r; sp::Int=1) = relative(Plots.ylims, r; sp=sp)
+function relative(p::Plots.Subplot, rx, ry)
+    xlims = Plots.xlims(p)
+    ylims = Plots.ylims(p)
+    return xlims[1] + rx * (xlims[2]-xlims[1]), ylims[1] + ry * (ylims[2] - ylims[1])
+end
+
+ps = simulate_LDH_experiment.(LDH_online[[1,18,11]], LDH_offline[[1,18,11]])
+px = [p[2] for p in ps]
+px_aew = [p[1] for p in ps]
+ps2 = plot(px..., size=(1000,260),
+    layout=(1,3),
+    xlim = (0, 2.5),
+    ylabel=["Intensity" "Intensity" "Intensity"],
     xlabel="Time [h]",
-    title=["(C)" "(D)" "(E)" "(F)"],
+    #title=["(C)" "(D)" "(E)" "(F)"],
     legendfontsize = 10,
     titlelocation = :left,
     bottom_margin=20Plots.px,
@@ -79,7 +96,33 @@ ps2 = plot([p[2] for p in ps]..., size=(1200,350),
     grid = false,
     framestyle = :box,
     legend = :bottomright)
-savefig(ps2, "figs/FluMo1_openloop_intensity.pdf")
+
+annotate!(sp=1, relative(ps2[1], 0.05, 0.93)..., text("(A)", :left))
+annotate!(sp=2, relative(ps2[2], 0.05, 0.93)..., text("(B)", :left))
+annotate!(sp=3, relative(ps2[3], 0.05, 0.93)..., text("(C)", :left))
+savefig(ps2, "figs/FluMo1_openloop_intensity_chiki.pdf")
+
+ps3 = plot(px_aew..., size=(1000,260),
+    layout=(1,3),
+    xlim = (0, 2.5),
+    ylabel=["AEW [nm]" "AEW [nm]" "AEW [nm]"],
+    xlabel="Time [h]",
+    #title=["(C)" "(D)" "(E)" "(F)"],
+    legendfontsize = 10,
+    titlelocation = :left,
+    bottom_margin=20Plots.px,
+    left_margin=20Plots.px,
+    tickfontsize = 10,
+    xlabelfontsize = 10,
+    ylabelfontsize = 10,
+    grid = false,
+    framestyle = :box,
+    legend = :topright)
+
+annotate!(sp=1, relative(ps3[1], 0.05, 0.93)..., text("(A)", :left))
+annotate!(sp=2, relative(ps3[2], 0.05, 0.93)..., text("(B)", :left))
+annotate!(sp=3, relative(ps3[3], 0.05, 0.93)..., text("(C)", :left))
+savefig(ps3, "figs/FluMo1_openloop_aew_chiki.pdf")
 
 # Soft-sensor validation 
 exps = [13,14,16,40,41,42]

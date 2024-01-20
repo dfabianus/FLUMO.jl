@@ -35,8 +35,8 @@ function simulate_LDH_experiment(online, offline)
     # else
     #     scatter!(offline.time./60, offline.c_P, label = "P(t) data")
     # end
-    p = plot(ts, osol(ts, idxs=sys.AEW).u, label = "model", linewidth=4)
-    p = plot!(online[!,1]./60, online[!,2].-online[1,2], label = "measured", color=3) #online[!,2].-online[1,2]
+    p = plot(ts, osol(ts, idxs=sys.AEW).u.+online[1,2], label = "model",  color=3)
+    p = plot!(online[!,1]./60, online[!,2], label = "measured", linewidth=2, color=1) #online[!,2].-online[1,2]
     p2 = plot(ts, osol(ts, idxs=sys.F).u, label = "model", color=3)
     p2 = plot!(online[!,1]./60, online[!,3], label = "measured", linewidth=2) #online[!,2].-online[1,2]
     return p, p2
@@ -203,25 +203,43 @@ function simulate_LDH_soft_sensor(online, offline; distinct=true, observer=false
     online.dIdt = pmean.(osol(t, idxs=sys_simp.dIdt).u)
 
     if "A" in names(offline)
-        NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
-        NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
-        NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
-        NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
-        NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
-        NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
-        NRMSE_NA_PF = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum(offline[!,"A"].+offline[!,"N"])-minimum(offline[!,"A"].+offline[!,"N"]))
-        NRMSE_N_PF = sqrt(mean(((offline[!,"N"]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(offline[!,"N"])-minimum(offline[!,"N"]))
-        NRMSE_A_PF = sqrt(mean(((offline[!,"A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(offline[!,"A"])-minimum(offline[!,"A"]))
+        # NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)))
+        # NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.N).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.N).u)))
+        # NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.A).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.A).u)))
+        # NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)))
+        # NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)))
+        # NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)))
+        # NRMSE_NA_PF = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum((PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60)))-minimum((PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))))
+        # NRMSE_N_PF = sqrt(mean(((offline[!,"N"]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(PF_N_fun.(offline.time./60))-minimum(PF_N_fun.(offline.time./60)))
+        # NRMSE_A_PF = sqrt(mean(((offline[!,"A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(PF_A_fun.(offline.time./60))-minimum(PF_A_fun.(offline.time./60)))
+        NRMSE_NA = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/mP_pulses[1]
+        NRMSE_N = sqrt(mean(((offline[!,"N"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/mP_pulses[1]
+        NRMSE_A = sqrt(mean(((offline[!,"A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/mP_pulses[1]
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/mP_pulses[1]
+        NRMSE_N_ol = sqrt(mean(((offline[!,"N"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/mP_pulses[1]
+        NRMSE_A_ol = sqrt(mean(((offline[!,"A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/mP_pulses[1]
+        NRMSE_NA_PF = sqrt(mean(((offline[!,"A"].+offline[!,"N"]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/mP_pulses[1]
+        NRMSE_N_PF = sqrt(mean(((offline[!,"N"]) .- PF_N_fun.(offline.time./60)).^2))/mP_pulses[1]
+        NRMSE_A_PF = sqrt(mean(((offline[!,"A"]) .- PF_A_fun.(offline.time./60)).^2))/mP_pulses[1]
     elseif "c_A" in names(offline)
-        NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
-        NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
-        NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
-        NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
-        NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
-        NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
-        NRMSE_NA_PF = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum(offline[!,"c_A"].+offline[!,"c_N "])-minimum(offline[!,"c_A"].+offline[!,"c_N "]))
-        NRMSE_N_PF = sqrt(mean(((offline[!,"c_N "]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(offline[!,"c_N "])-minimum(offline[!,"c_N "]))
-        NRMSE_A_PF = sqrt(mean(((offline[!,"c_A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(offline[!,"c_A"])-minimum(offline[!,"c_A"]))
+        # NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)))
+        # NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.N).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.N).u)))
+        # NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/(maximum(pmean.(osol(offline.time./60, idxs=sys_simp.A).u))-minimum(pmean.(osol(offline.time./60, idxs=sys_simp.A).u)))
+        # NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)))
+        # NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)))
+        # NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/(maximum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u))-minimum(pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)))
+        # NRMSE_NA_PF = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/(maximum((PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60)))-minimum((PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))))
+        # NRMSE_N_PF = sqrt(mean(((offline[!,"c_N "]) .- PF_N_fun.(offline.time./60)).^2))/(maximum(PF_N_fun.(offline.time./60))-minimum(PF_N_fun.(offline.time./60)))
+        # NRMSE_A_PF = sqrt(mean(((offline[!,"c_A"]) .- PF_A_fun.(offline.time./60)).^2))/(maximum(PF_A_fun.(offline.time./60))-minimum(PF_A_fun.(offline.time./60)))
+        NRMSE_NA = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N+sys_simp.A).u)).^2))/mP_pulses[1]
+        NRMSE_N = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol(offline.time./60, idxs=sys_simp.N).u)).^2))/mP_pulses[1]
+        NRMSE_A = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol(offline.time./60, idxs=sys_simp.A).u)).^2))/mP_pulses[1]
+        NRMSE_NA_ol = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN+sys_ol.cA).u)).^2))/mP_pulses[1]
+        NRMSE_N_ol = sqrt(mean(((offline[!,"c_N "]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cN).u)).^2))/mP_pulses[1]
+        NRMSE_A_ol = sqrt(mean(((offline[!,"c_A"]) .- pmean.(osol_ol(offline.time./60, idxs=sys_ol.cA).u)).^2))/mP_pulses[1]
+        NRMSE_NA_PF = sqrt(mean(((offline[!,"c_A"].+offline[!,"c_N "]) .- (PF_N_fun.(offline.time./60).+PF_A_fun.(offline.time./60))).^2))/mP_pulses[1]
+        NRMSE_N_PF = sqrt(mean(((offline[!,"c_N "]) .- PF_N_fun.(offline.time./60)).^2))/mP_pulses[1]
+        NRMSE_A_PF = sqrt(mean(((offline[!,"c_A"]) .- PF_A_fun.(offline.time./60)).^2))/mP_pulses[1]
     else
         NRMSE_NA = 0.
         NRMSE_N = 0.
@@ -350,7 +368,7 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true, observer=fal
     hline!([0], label="", color=:black)
     if observer p2 = plot!(time_int, [s[2] for s in x̂]./[s[1] for s in x̂], label = "I (PF observer)", color=1, linewidth=3, linestyle=:dot) end
     if distinct
-        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "N (direct soft-sensor)", color=3)
+        p2 = plot!(ts, osol(ts, idxs=sys_simp.N).u, label = "NC+N (direct soft-sensor)", color=3)
         p2 = plot!(ts, osol(ts, idxs=sys_simp.A).u, label = "A (direct soft-sensor)", color=4)
         if observer
             p2 = plot!(time_int, ([s[3] for s in x̂])./[s[1] for s in x̂], label = "NC+N (PF observer)", color=5, linewidth=3, linestyle=:dot)
@@ -366,7 +384,7 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true, observer=fal
     #if "cP_theo" in names(offline)
         NA = [(([s[3] for s in x̂].+[s[4] for s in x̂])./[s[1] for s in x̂])[end].+0.05*randn()]
         scatter!([(online[:,1]./60)[end]], NA, 
-        label="(NC+A) measured", 
+        label="NC+N+A (measured)", 
         yerr = [relative_errors_native((([s[3] for s in x̂]+[s[4] for s in x̂])./[s[1] for s in x̂])[end])/100])
     #end
     vline!([offline["t_cop"]/60], label="copper addition", color=6,linewidth=2, linestyle=:dash)
@@ -396,9 +414,9 @@ function simulate_GalOx_soft_sensor(online, offline; distinct=true, observer=fal
     online.A_ss = pmean.(osol(online[:,1]./60, idxs=sys_simp.A).u)
     online.dIdt = pmean.(osol(online[:,1]./60, idxs=sys_simp.dIdt).u)
 
-    NRMSE_NA = sqrt(mean((NA .- pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)[end]).^2))
-    NRMSE_NA_ol = sqrt(mean((NA .- pmean.(osol_ol(online[:,1]./60, idxs=sys_ol.cN+sys_ol.cA).u)[end]).^2))
-    NRMSE_NA_PF = sqrt(mean((NA .- (PF_N_fun.(online[:,1]./60).+PF_A_fun(online[:,1]./60))[end]).^2))
+    NRMSE_NA = sqrt(mean((NA .- pmean.(osol(online[:,1]./60, idxs=sys_simp.N+sys_simp.A).u)[end]).^2))/mP
+    NRMSE_NA_ol = sqrt(mean((NA .- pmean.(osol_ol(online[:,1]./60, idxs=sys_ol.cN+sys_ol.cA).u)[end]).^2))/mP
+    NRMSE_NA_PF = sqrt(mean((NA .- (PF_N_fun.(online[:,1]./60).+PF_A_fun(online[:,1]./60))[end]).^2))/mP
     return pt2, NRMSE_NA, NRMSE_NA_ol, NRMSE_NA_PF
     #return pt2
 end
